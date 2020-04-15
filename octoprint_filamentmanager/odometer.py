@@ -15,8 +15,8 @@ class FilamentOdometer(object):
     regexT = re.compile(r'[tT](\d+)')
     regexD = re.compile(r'[dD](\d+(\.\d+)?)')
 
-    def __init__(self):
-        self.g90_extruder = True
+    def __init__(self, g90_extruder):
+        self.g90_extruder = g90_extruder
         self.reset()
 
     def reset(self):
@@ -36,9 +36,6 @@ class FilamentOdometer(object):
         self.totalExtrusion = [0.0] * tools
 
     def parse(self, gcode, cmd):
-        if gcode is None:
-            return
-
         if gcode == "G1" or gcode == "G0":  # move
             e = self._get_float(cmd, self.regexE)
             if e is not None:
@@ -71,12 +68,12 @@ class FilamentOdometer(object):
             self.relativeExtrusion = False
         elif gcode == "M83":  # set extruder to relative mode
             self.relativeExtrusion = True
-        elif gcode.startswith("T"):  # select tool
+        elif gcode is not None and gcode.startswith("T"):  # select tool
             t = self._get_int(cmd, self.regexT)
             if t is not None:
                 self.currentTool = t
                 if len(self.lastExtrusion) <= self.currentTool:
-                    for i in xrange(len(self.lastExtrusion), self.currentTool + 1):
+                    for i in range(len(self.lastExtrusion), self.currentTool + 1):
                         self.lastExtrusion.append(0.0)
                         self.totalExtrusion.append(0.0)
                         self.maxExtrusion.append(0.0)
@@ -97,8 +94,13 @@ class FilamentOdometer(object):
                 self._baseAreas[t] = self._calc_base_area(d)
             else:
                 self.volumetricExtrusion[t] = False
+        else:
+            # Unhandled/unrecognized gcode command
+            return False
 
-    def set_g90_extruder(self, flag=True):
+        return True
+
+    def set_g90_extruder(self, flag):
         self.g90_extruder = flag
 
     def get_extrusion(self):

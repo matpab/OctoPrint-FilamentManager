@@ -88,4 +88,14 @@ FilamentManager.prototype.viewModels.selections = function selectedSpoolsViewMod
             self.selectedSpools.valueHasMutated(); // notifies observers
         }
     };
+
+    const m600Dialog = $('#plugin_filamentmanager_m600dialog');
+
+    self.showM600Dialog = () => {
+        m600Dialog.modal('show');
+    };
+
+    self.hideM600Dialog = () => {
+        m600Dialog.modal('hide');
+    };
 };

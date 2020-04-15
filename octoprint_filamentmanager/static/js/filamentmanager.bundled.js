@@ -75,7 +75,7 @@ FilamentManager.prototype.core.bridge = function pluginBridge() {
 
         REQUIRED_VIEWMODELS: ['settingsViewModel', 'printerStateViewModel', 'loginStateViewModel', 'temperatureViewModel', 'filesViewModel'],
 
-        BINDINGS: ['#settings_plugin_filamentmanager', '#settings_plugin_filamentmanager_profiledialog', '#settings_plugin_filamentmanager_spooldialog', '#settings_plugin_filamentmanager_configurationdialog', '#sidebar_plugin_filamentmanager_wrapper', '#plugin_filamentmanager_confirmationdialog'],
+        BINDINGS: ['#settings_plugin_filamentmanager', '#settings_plugin_filamentmanager_profiledialog', '#settings_plugin_filamentmanager_spooldialog', '#settings_plugin_filamentmanager_configurationdialog', '#sidebar_plugin_filamentmanager_wrapper', '#plugin_filamentmanager_confirmationdialog', '#plugin_filamentmanager_m600dialog'],
 
         viewModel: function FilamentManagerViewModel(viewModels) {
             self.core.bridge.allViewModels = _.object(self.core.bridge.REQUIRED_VIEWMODELS, viewModels);
@@ -132,6 +132,10 @@ FilamentManager.prototype.core.callbacks = function octoprintCallbacks() {
             self.viewModels.profiles.requestProfiles();
             self.viewModels.spools.requestSpools();
             self.viewModels.selections.requestSelectedSpools();
+        } else if (messageType === 'm600_command_started') {
+            self.viewModels.selections.showM600Dialog();
+        } else if (messageType === 'm600_command_finished') {
+            self.viewModels.selections.hideM600Dialog();
         }
     };
 };
@@ -700,6 +704,16 @@ FilamentManager.prototype.viewModels.selections = function selectedSpoolsViewMod
             self.selectedSpools.valueHasMutated(); // notifies observers
         }
     };
+
+    var m600Dialog = $('#plugin_filamentmanager_m600dialog');
+
+    self.showM600Dialog = function () {
+        m600Dialog.modal('show');
+    };
+
+    self.hideM600Dialog = function () {
+        m600Dialog.modal('hide');
+    };
 };
 /* global FilamentManager ItemListHelper ko Utils $ PNotify gettext showConfirmationDialog */
 
@@ -1009,7 +1023,6 @@ FilamentManager.prototype.viewModels.warning = function insufficientFilamentWarn
             }
         }
 
-        filename = printerStateViewModel.filename();
         printerStateViewModel.filamentWithWeight(filament);
     };
 
@@ -1020,13 +1033,11 @@ FilamentManager.prototype.viewModels.warning = function insufficientFilamentWarn
             // OctoPrint constantly updates the filament observable, to prevent invocing the warning message
             // on every update we only call the updateFilament() method if the selected file has changed
             if (filename !== printerStateViewModel.filename()) {
-                if (printerStateViewModel.filename() !== undefined && printerStateViewModel.filament().length < 1) {
-                    // file selected, but no filament data found, probably because it's still in analysis queue
-                    waitForFilamentData = true;
-                } else {
-                    waitForFilamentData = false;
-                    updateFilament();
-                }
+                // if new file selected but no filament data found (probably because it's still in analysis queue)
+                // we set the wait flag to update the view again, when the data arives
+                waitForFilamentData = printerStateViewModel.filename() != null && printerStateViewModel.filament().length < 1;
+                filename = printerStateViewModel.filename();
+                updateFilament();
             } else if (waitForFilamentData && printerStateViewModel.filament().length > 0) {
                 waitForFilamentData = false;
                 updateFilament();

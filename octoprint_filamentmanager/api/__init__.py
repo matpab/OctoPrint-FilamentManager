@@ -19,7 +19,7 @@ from octoprint.server import admin_permission
 from octoprint.server.util.flask import restricted_access, check_lastmodified, check_etag
 from octoprint.util import dict_merge
 
-from .util import *
+from .util import entity_tag, add_revalidation_header_with_no_max_age
 
 
 class FilamentManagerApi(octoprint.plugin.BlueprintPlugin):
@@ -283,7 +283,7 @@ class FilamentManagerApi(octoprint.plugin.BlueprintPlugin):
         if "id" not in selection.get("spool", {}):
             return make_response("Selection does not contain mandatory 'id (spool)' field", 400)
 
-        if self._printer.is_printing():
+        if self._printer.is_printing() and not self.m600_command_running:
             return make_response("Trying to change filament while printing", 409)
 
         try:
